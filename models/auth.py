@@ -41,6 +41,8 @@ class Session(Base,TimeStampMixin,UUIDMixin):
 
 
 class OTPVerification(Base,UUIDMixin,TimeStampMixin):
+    __tablename__ = "otp_verifications"
     opt_code:Mapped[str] = mapped_column()
     exipres_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     is_used: Mapped[bool] = mapped_column(server_default="false")
+    target: Mapped[str] = mapped_column()
