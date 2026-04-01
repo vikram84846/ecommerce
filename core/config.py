@@ -17,6 +17,13 @@ class Settings(BaseSettings):
     TWILIO_AUTH_TOKEN: str
     TWILIO_VERIFY_SERVICE_ID: str 
 
+    #Mail configuration
+    MAIL_USERNAME: str
+    MAIL_PASSWORD: str
+    MAIL_PORT: int
+    MAIL_SERVER: str
+    MAIL_TLS: bool
+    MAIL_SSL: bool
 
     model_config = SettingsConfigDict(env_file=".env")
 
