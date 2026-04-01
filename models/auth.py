@@ -6,8 +6,8 @@ from datetime import datetime
 
 class Provider(Enum,str):
     email = "email"
-    phonne = "phone"
-    google = "goolge"
+    phone = "phone"
+    google = "google"
 
 class Role(Enum,str):
     consumer = "consumer"
@@ -42,7 +42,7 @@ class Session(Base,TimeStampMixin,UUIDMixin):
 
 class OTPVerification(Base,UUIDMixin,TimeStampMixin):
     __tablename__ = "otp_verifications"
-    opt_code:Mapped[str] = mapped_column()
-    exipres_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    otp_code:Mapped[str] = mapped_column(index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     is_used: Mapped[bool] = mapped_column(server_default="false")
     target: Mapped[str] = mapped_column()

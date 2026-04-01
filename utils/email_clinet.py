@@ -1,6 +1,5 @@
 from fastapi_mail import ConnectionConfig, FastMail, MessageSchema, MessageType
 from core.config import app_settings
-import asyncio
 
 def get_configuration():
     config = ConnectionConfig(
@@ -14,9 +13,6 @@ def get_configuration():
 
     )
     return config
-
-
-
 
 
 class EmailService:
