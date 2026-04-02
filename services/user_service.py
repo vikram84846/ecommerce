@@ -10,6 +10,7 @@ from utils.twilio import twilio_verify_client
 import secrets
 from core.constants import OTP_LENGTH
 from utils.email_clinet import mail_service
+from core.exceptions import UserAlreadyExistsError
 
 
 def _generate_otp(length: int = OTP_LENGTH) -> str:
@@ -80,11 +81,11 @@ class UserService:
         if data.email:
             existing_user = await self.user_repo.get_by_email_or_phone(email=data.email)
             if existing_user:
-                raise ValueError("User already exists.")
+                 raise UserAlreadyExistsError("User already exists")
         if data.phone:
             existing_user = await self.user_repo.get_by_email_or_phone(phone=data.phone)
             if existing_user:
-                raise ValueError("User already exists.")
+                    raise UserAlreadyExistsError("User already exists")
         
         # create user and auth identity
         if data.email and data.password:
