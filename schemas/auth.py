@@ -5,6 +5,7 @@ import phonenumbers
 from phonenumbers import NumberParseException
 from schemas.enums import Role
 import re
+from uuid import UUID
 
 
 class UserCreate(BaseModel):
@@ -98,7 +99,7 @@ class UserUpdate(BaseModel):
 
 
 class UserRead(BaseModel):
-    id: str
+    id: UUID
     email: EmailStr | None = None
     phone: str | None = None
     is_active: bool
