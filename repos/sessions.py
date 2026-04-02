@@ -1,34 +1,61 @@
-from models.auth import Session
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, update
+from models.auth import Session
 from datetime import datetime, timezone, timedelta
+from core.constants import REFRESH_TOKEN_EXPIRE_DAYS
+from core.security import hash_password, verify_password
 
 
-async def create_session(db: AsyncSession, user_id: str, refresh_token: str, expires_at: datetime, user_agent: str, ip_address: str) -> Session:
-    session = Session(
-        user_id=user_id,
-        refresh_token=refresh_token,
-        expires_at=expires_at,
-        user_agent=user_agent,
-        ip_address=ip_address
-    )
-    db.add(session)
-    await db.flush()
-    return session
 
-async def revoke_session(db: AsyncSession, refresh_token: str):
-    stmt = select(Session).where(Session.refresh_token == refresh_token)
-    result = await db.execute(stmt)
-    session = result.scalar_one_or_none()
-    if session:
-        session.is_revoked = True
-        await db.commit()
-    return session
+class SessionRepo:
+    def __init__(self, db: AsyncSession):
+        self.db = db
+    
+    async def create(
+            self,
+            user_id: str,
+            refresh_token: str,
+            user_agent: str | None = None,
+            ip_address: str | None = None,
+            device_id: str | None = None,
+            epires_at: datetime | None = datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    )->Session:
+        new_session = Session(
+            user_id=user_id,
+            refresh_token=hash_password(refresh_token),
+            user_agent=user_agent,
+            ip_address=ip_address,
+            device_id=device_id,
+            expires_at=epires_at
+        )
+        self.db.add(new_session)
+        await self.db.refresh(new_session)
+        return new_session
+    
+    async def get_by_refresh_token(self, refresh_token: str) -> Session | None:
+        result = await self.db.execute(
+            select(Session).where(Session.refresh_token == hash_password(refresh_token))
+        )
+        session = result.scalar_one_or_none()
+        if session and not session.is_revoked and session.expires_at > datetime.now(timezone.utc):
+            return session
+        return None
+    
+    async def revoke_by_refresh_token(self, refresh_token: str) -> None:
+        session = await self.get_by_refresh_token(refresh_token)
+        if session:
+            session.is_revoked = True
+            self.db.add(session)
+            await self.db.flush()
 
-async def get_session_by_refresh_token(db: AsyncSession, refresh_token: str) -> Session | None:
-    stmt = select(Session).where(Session.refresh_token == refresh_token)
-    result = await db.execute(stmt)
-    session = result.scalar_one_or_none()
-    if session and not session.is_revoked and session.expires_at > datetime.now(timezone.utc):
-        return session
-    return None
+    async def get_active_user_sessions(self, user_id: str) -> list[Session]:
+        result = await self.db.execute(
+            select(Session).where(Session.user_id == user_id, Session.is_revoked == False, Session.expires_at > datetime.now(timezone.utc))
+        )
+        return result.scalars().all()
+    
+    async def revoke_all_user_sessions(self, user_id: str) -> None:
+        await self.db.execute(
+            update(Session).where(Session.user_id == user_id, Session.is_revoked == False).values(is_revoked=True)
+        )
+        await self.db.flush()
