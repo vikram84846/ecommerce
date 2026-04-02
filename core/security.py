@@ -1,48 +1,48 @@
-from jose import jwt, JWTError
+import jwt
+from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
 from passlib.context import CryptContext
 from datetime import datetime, timedelta, timezone
-from core.config import app_settings
+from core.config import get_settings
+from core.constants import (
+    ALGORITHM,
+    ACCESS_TOKEN_EXPIRE_MINS,
+    REFRESH_TOKEN_EXPIRE_DAYS
+)
 
-ACCESS_TOKEN_EXIPRY = datetime.now(timezone.utc) + timedelta(minutes=app_settings.ACCESS_TOKEN_EXPIRE_MINS)
-
-REFRESH_TOKEN_EXPIRY = datetime.now(timezone.utc) + timedelta(days=app_settings.REFRESH_TOKEN_EXPIRE_DAYS)
-
-pwd_context = CryptContext(["bcrypt"])
-
-
-def hash_passwd(raw_passwd:str)->str:
-    return pwd_context.hash(raw_passwd)
+settings = get_settings()
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
-def verify_pwd(raw_pwd:str, hash_pwd:str)->bool:
-    return pwd_context.verify(raw_pwd,hash_passwd)
+def hash_password(raw_password: str) -> str:
+    return pwd_context.hash(raw_password)
 
 
+def verify_password(raw_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(raw_password, hashed_password)
 
-def create_jwt_token(data:dict,type:str="access")->str:
+
+def create_jwt_token(data: dict, token_type: str = "access") -> str:
     to_encode = data.copy()
-    if not isinstance(type,str):
-        raise TypeError
-    if type.lower() == "access":
-        to_encode.update({
-            "exp":ACCESS_TOKEN_EXIPRY
-        })
-    elif type.lower() == "refresh":
-        to_encode.update({
-            "exp":REFRESH_TOKEN_EXPIRY,
-            "type":"refresh"
-        })
+
+    if token_type == "access":
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINS)
+    elif token_type == "refresh":
+        expires_at = datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     else:
-        raise ValueError("Invalid token type")
-    return jwt.encode(to_encode,app_settings.SECRET,algorithm=app_settings.ALGORITHM)
+        raise ValueError(f"Invalid token_type: {token_type}")
+
+    to_encode.update({
+        "exp": expires_at,
+        "type": token_type  # dono tokens mein type claim
+    })
+
+    return jwt.encode(to_encode, settings.SECRET, algorithm=ALGORITHM)
 
 
-def decode_jwt_token(token:str)->dict:
+def decode_jwt_token(token: str) -> dict:
     try:
-            payload =jwt.decode(token=token,key=app_settings.SECRET,algorithms=[app_settings.ALGORITHM])
-            return payload
-    except JWTError:
-        return None
-
-
-        
+        return jwt.decode(token, settings.SECRET, algorithms=[ALGORITHM])
+    except ExpiredSignatureError:
+        raise
+    except InvalidTokenError:
+        raise

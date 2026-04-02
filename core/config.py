@@ -1,16 +1,13 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
-
+from pydantic import PostgresDsn
 class Settings(BaseSettings):
 
     #data base 
-    DB_URL: str
+    DB_URL: PostgresDsn
 
     #security 
     SECRET: str
-    ALGORITHM: str
-    ACCESS_TOKEN_EXPIRE_MINS: int
-    REFRESH_TOKEN_EXPIRE_DAYS: int
 
     #TWILIO
     TWILIO_ACCOUNT_SID: str
@@ -20,12 +17,15 @@ class Settings(BaseSettings):
     #Mail configuration
     MAIL_USERNAME: str
     MAIL_PASSWORD: str
-    MAIL_PORT: int
+    MAIL_PORT: int = 587
     MAIL_SERVER: str
-    MAIL_TLS: bool
-    MAIL_SSL: bool
+    MAIL_STARTTLS: bool = True
+    MAIL_SSL_TLS: bool = False
 
     model_config = SettingsConfigDict(env_file=".env")
+    
+    #debug true for development and false for production
+    DEBUG: bool = True
 
     
 
@@ -34,4 +34,3 @@ class Settings(BaseSettings):
 def get_settings()->Settings:
     return Settings()
 
-app_settings = get_settings()
