@@ -42,7 +42,7 @@ class UserFactory:
             phone = data.phone,
             role= data.role
         )
-        identity = self.identity_repo.create(
+        identity = await self.identity_repo.create(
             user_id= user.id,
             provider= Provider.phone,
             provider_user_id= user.phone
