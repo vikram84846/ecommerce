@@ -148,10 +148,6 @@ class EmailLoginRequest(BaseModel):
     def lowercase_email(cls, v):
         return _lowercase_email(v)
 
-    @field_validator("password")
-    @classmethod
-    def validate_password(cls, v):
-        return _validate_password(v)
     
 
 class PhoneLoginRequest(BaseModel):
