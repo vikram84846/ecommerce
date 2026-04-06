@@ -50,3 +50,22 @@ class AuthIdentityRepo:
         )
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
+    
+    async def update(
+            self,
+            user_id:str,
+            provider: Provider,
+            password: str| None
+    ):
+        identity = self.get_by_user_and_provider(
+            user_id=user_id,
+            provider=provider
+        )
+        if identity and password:
+            identity.password_hash = hash_password(password)
+            self.db.add(identity)
+            await self.db.flush()
+            await self.db.refresh(identity)
+            return identity
+        raise ValueError("Auth identity not found")
+        

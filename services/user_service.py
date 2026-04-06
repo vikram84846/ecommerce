@@ -72,7 +72,7 @@ class UserService:
         self.otp_repo = OTPRepo(db)
         self.background_tasks = background_tasks
         self.user_factory = UserFactory(db)
-
+        self.auth_repo = AuthIdentityRepo(db)
     async def register(
             self,
             data: UserCreate,
@@ -105,13 +105,13 @@ class UserService:
         otp = _generate_otp()
 
         #invalidate old OTPs
-        await self.otp_repo.invalidate_previous(target=email, purpose=OTPPurpose.signup)
+        await self.otp_repo.invalidate_previous(target=email, purpose=OTPPurpose.email_verification)
 
         #new OTP entry
         await self.otp_repo.create(
             target=email,
             otp=otp,
-            purpose= OTPPurpose.signup
+            purpose= OTPPurpose.email_verification
         )
         # send otp via email in background
         self.background_tasks.add_task(
@@ -119,3 +119,26 @@ class UserService:
             email=email,
             code=otp
         )
+    
+    async def _send_password_reset_mail(self,email:str):
+        otp = _generate_otp()
+        await self.otp_repo.invalidate_previous(target=email,purpose=OTPPurpose.password_reset)
+        await self.otp_repo.create(
+            target= email,
+            otp=otp,
+            purpose= OTPPurpose.password_reset
+        )
+        self.background_tasks.add_task(
+            mail_service.send_password_reset_mail,
+            email=email,
+            otp=otp
+        )
+    async def change_email_password(
+            self,
+            user_id:str,
+            password:str
+        ):
+        identity =await self.auth_repo.update(user_id=user_id,provider="email",password=password)
+        return identity
+        
+        

@@ -155,6 +155,71 @@ class EmailService:
             await self.client.send_message(message)
         except Exception:
             raise
+    async def send_password_reset_mail(self, email: str, otp: str, expires_in_minutes: int = OTP_EXPIRE_MINUTES):
+      html = f"""
+      <!DOCTYPE html>
+      <html>
+      <body style="margin:0;padding:0;background:#f4f4f5;font-family:Arial,sans-serif;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 0;">
+          <tr><td align="center">
+            <table width="520" cellpadding="0" cellspacing="0"
+                  style="background:#ffffff;border-radius:8px;border:1px solid #e4e4e7;overflow:hidden;">
+
+              <tr>
+                <td style="background:#18181b;padding:24px 32px;">
+                  <p style="margin:0;font-size:18px;font-weight:600;color:#ffffff;letter-spacing:0.3px;">
+                    Your App
+                  </p>
+                </td>
+              </tr>
+
+              <tr>
+                <td style="padding:32px;">
+                  <p style="margin:0 0 8px;font-size:22px;font-weight:600;color:#18181b;">
+                    Password Reset Request
+                  </p>
+                  <p style="margin:0 0 24px;font-size:14px;color:#71717a;line-height:1.6;">
+                    We received a request to reset your password. Use the code below to proceed.
+                    This code expires in <strong>{expires_in_minutes} minutes</strong>.
+                  </p>
+
+                  <div style="background:#f4f4f5;border-radius:6px;padding:20px;text-align:center;
+                              letter-spacing:10px;font-size:32px;font-weight:700;color:#18181b;
+                              border:1px dashed #d4d4d8;margin-bottom:24px;">
+                    {otp}
+                  </div>
+
+                  <p style="margin:0;font-size:13px;color:#a1a1aa;line-height:1.6;">
+                    If you did not request a password reset, please ignore this email.
+                    Your password will remain unchanged. Do not share this code with anyone.
+                  </p>
+                </td>
+              </tr>
+
+              <tr>
+                <td style="padding:16px 32px;border-top:1px solid #f4f4f5;">
+                  <p style="margin:0;font-size:12px;color:#a1a1aa;">
+                    &copy; 2025 Your App. All rights reserved.
+                  </p>
+                </td>
+              </tr>
+
+            </table>
+          </td></tr>
+        </table>
+      </body>
+      </html>
+      """
+      message = MessageSchema(
+          recipients=[email],
+          subject="Password Reset Code",
+          body=html,
+          subtype=MessageType.html
+      )
+      try:
+          await self.client.send_message(message)
+      except Exception:
+          raise
 
 
 mail_service = EmailService()

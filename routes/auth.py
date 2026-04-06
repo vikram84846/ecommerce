@@ -9,6 +9,17 @@ from core.constants import REFRESH_TOKEN_EXPIRE_DAYS
 settings = get_settings()
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+
+def _set_refresh_token(response:Response,refresh_token:str):
+    response.set_cookie(
+        key= "refresh_token",
+        value = refresh_token,
+        httponly=True,
+        samesite="strict",
+        max_age= REFRESH_TOKEN_EXPIRE_DAYS * 24 * 3600
+
+    )
+
 @router.post("/register", response_model=UserRead)
 async def register(
     data: UserCreate,
@@ -53,14 +64,7 @@ async def email_login(
     tokens = await auth_service.login_email(data,request)
     access_token, refresh_token = tokens["access_token"], tokens["refresh_token"]
     # Set HttpOnly cookie for refresh token
-    response.set_cookie(
-        key="refresh_token",
-        value=refresh_token,
-        httponly=True,
-        secure=settings.DEBUG,
-        samesite="Strict",
-        max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 3600,  # Specified days
-    )
+    _set_refresh_token(response,refresh_token)
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.post("/login/phone")
@@ -74,12 +78,37 @@ async def phone_login(
     tokens = await auth_service.login_phone(data,request)
     access_token, refresh_token = tokens["access_token"], tokens["refresh_token"]
     # Set HttpOnly cookie for refresh token
-    response.set_cookie(
-        key="refresh_token",
-        value=refresh_token,
-        httponly=True,
-        secure=settings.DEBUG,
-        samesite="Strict",
-        max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 3600,  # Specified days
-    )
+    _set_refresh_token(response,refresh_token)
     return {"access_token": access_token, "token_type": "bearer"}
+
+@router.post("/refresh")
+async def refresh_tokens(request:Request,response:Response,db:AsyncSession= Depends(get_db)):
+    refresh_token = request.cookies.get("refresh_token")
+    auth_service = AuthService(db)
+    if refresh_token:
+        tokens = await auth_service.refresh_tokens(refresh_token=refresh_token)
+        access_token, refresh_token = tokens["access_token"], tokens["refresh_token"]
+        #set refresh_token 
+        _set_refresh_token(response, refresh_token)
+        return {
+            "access_token": access_token, "token_type":"bearer"
+        }
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail= "token missing"
+    )
+
+@router.post("/logout")
+async def logout(request:Request,db:AsyncSession = Depends(get_db)):
+    auth_service = AuthService(db)
+    refresh_token = request.cookies.get("refresh_token")
+    if refresh_token:
+        await auth_service.logout(refresh_token)
+        return {
+            "success":"ok",
+            "detail":"user loged out successfuly"
+        }
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="token missing"
+    )

@@ -179,7 +179,7 @@ class AuthService:
     #  REFRESH TOKEN                                                       #
     # ------------------------------------------------------------------ #
 
-    async def refresh_token(self, refresh_token: str):
+    async def refresh_tokens(self, refresh_token: str):
         session = await self.session_repo.get_by_refresh_token(refresh_token)
         if not session:
             raise SessionNotFoundError("Session not found or expired")
@@ -193,7 +193,10 @@ class AuthService:
 
         # Rotate refresh token — revoke old, issue new
         await self.session_repo.revoke_by_refresh_token(refresh_token)
-        new_refresh_token = secrets.token_urlsafe(32)
+        new_refresh_token = create_jwt_token(
+            data={"sub": str(user.id), "role": user.role},
+            token_type="refresh"
+        )
         await self.session_repo.create(
             user_id=str(user.id),
             refresh_token=new_refresh_token,

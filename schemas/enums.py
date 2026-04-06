@@ -12,7 +12,6 @@ class Role(str, Enum):
 
 class OTPPurpose(str, Enum):
     #twillio hanles phone verification, so we only need to handle email related OTPs
-    signup = "signup"
     password_reset = "password_reset"
     email_verification = "email_verification"
     
